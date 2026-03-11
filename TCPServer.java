@@ -4,36 +4,37 @@ import java.util.*;
 
 public class TCPServer {
 
-    static final int PORT         = 9999;
-    static final int TIME_INTERVAL = 1000;
+    private static final int PORT = 9000;
+    private static final int TIME_INTERVAL = 1000;
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) throws IOException {
 
         ServerSocket server = new ServerSocket(PORT);
-        System.out.println("[SERVER] Waiting for connection...");
+        System.out.println("Waiting for connection...");
 
         Socket socket = server.accept();
         Scanner in = new Scanner(socket.getInputStream());
         PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-        System.out.println("[SERVER] Client connected.");
+        System.out.println("Client connected.");
 
-        // --- Handshake ---
-        System.out.println("[SERVER] Received: " + in.nextLine());
+        //connect to client
+        System.out.println("Received: " + in.nextLine());
         out.println("SUCCESS");
 
-        // --- Receive loop ---
         Set<Long> received = new HashSet<>();
         long totalReceived = 0;
         long totalAttempted = 0;
         long nextExpected = 0;
         long nextReportAt = TIME_INTERVAL;
 
-        double goodputSum   = 0;
+        double goodputSum = 0;
         int goodputCount = 0;
 
         while (in.hasNextLine()) {
             String line = in.nextLine();
-            if (line.equals("DONE")) break;
+            if (line.equals("DONE")) {
+                break;
+            }
 
             String[] parts = line.split(":");
             long seq = Long.parseLong(parts[0]);
@@ -54,16 +55,16 @@ public class TCPServer {
                 double gp = (double) totalReceived / totalAttempted;
                 goodputSum += gp;
                 goodputCount++;
-                System.out.printf("[SERVER] Received=%,7d  Attempted=%,7d  Goodput=%.4f%n",
+                System.out.printf("Received=%,7d  Attempted=%,7d  Goodput=%.4f%n",
                         totalReceived, totalAttempted, gp);
                 nextReportAt += TIME_INTERVAL;
             }
         }
 
-        // --- Final summary ---
         double finalGoodput = (double) totalReceived / totalAttempted;
         double avgGoodput = goodputSum / goodputCount;
 
+        // --- Final summary ---
         System.out.println("\n===== FINAL SUMMARY =====");
         System.out.printf("Total Attempted by client : %,d%n", totalAttempted);
         System.out.printf("Total Unique Received     : %,d%n", totalReceived);
@@ -71,7 +72,7 @@ public class TCPServer {
         System.out.printf("Average Goodput           : %.6f%n", avgGoodput);
         System.out.println("=========================");
 
-        // Close everything
+        //close everything
         in.close();
         out.close();
         socket.close();
