@@ -7,7 +7,7 @@ public class TCPClient {
     private static final String SERVER_IP = "127.0.0.1";
     private static final int PORT = 9000;
     private static final double DROP_PROB = 0.01;
-    private static final int TOTAL_PACKETS = 100000;
+    private static final int TOTAL_PACKETS = 1000000;
     private static final int RETRANSMISSION = 100;
     private static final int WINDOW_SIZE = 16;
 
@@ -67,7 +67,7 @@ public class TCPClient {
                 lastPrinted = sendBase;
             }
 
-            //if window is full, but can not restransmit because we are waiting for ACk(deadlock)
+            //if window is full, but can not restransmit because we are waiting for Ack(deadlock)
             boolean stuckWindow = (nextSeq - sendBase) >= WINDOW_SIZE && !dropped.isEmpty();
 
             //retransmit dropped packets every RETRANSMISSION steps
@@ -78,7 +78,7 @@ public class TCPClient {
                     if (rand.nextDouble() < DROP_PROB) {
                         stillDropped.add(idx);
                     } else {
-                        long wrappedIdx = idx % 65536;
+                        long wrappedIdx = idx % 65536;  
                         out.println(wrappedIdx + ":" + totalAttempted);
                         in.nextLine();
                     }
@@ -88,13 +88,11 @@ public class TCPClient {
             }
         }
 
-        //retransmit the remaining dropped packets
+        //retransmit the remaining dropped packets at the end if any left
         for (long idx : dropped) {
             totalAttempted++;
-            if (rand.nextDouble() >= DROP_PROB) {
-                out.println(idx % 65536+ ":" + totalAttempted);
-                in.nextLine();
-            }
+            out.println(idx % 65536+ ":" + totalAttempted);
+            in.nextLine();
         }
 
         out.println("DONE");
