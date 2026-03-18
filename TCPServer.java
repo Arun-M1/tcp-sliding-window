@@ -21,7 +21,8 @@ public class TCPServer {
         System.out.println("Received: " + in.nextLine());
         out.println("SUCCESS");
 
-        Set<Long> received = new HashSet<>();
+        // Set<Long> received = new HashSet<>();
+        boolean[] received = new boolean[65536];
         long totalReceived = 0;
         long totalAttempted = 0;
         long nextExpected = 0;
@@ -39,16 +40,18 @@ public class TCPServer {
             String[] parts = line.split(":");
             long seq = Long.parseLong(parts[0]);
             totalAttempted = Long.parseLong(parts[1]);
-
-            if (!received.contains(seq)) {
-                received.add(seq);
+            
+            int seqInt = (int)(seq % 65536);
+            if (!received[seqInt]) {
+                received[seqInt] = true;
                 totalReceived++;
             }
 
-            while (received.contains(nextExpected)) {
+            while (received[(int)(nextExpected % 65536)]) {
+                received[(int)(nextExpected % 65536)] = false;
                 nextExpected++;
             }
-
+            
             out.println(nextExpected);
 
             if (totalReceived >= nextReportAt) {
