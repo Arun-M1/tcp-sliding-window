@@ -1,3 +1,6 @@
+// Arun Murugan
+// Ajay Paramasivan 
+
 import java.io.*;
 import java.net.*;
 import java.util.*;
@@ -159,7 +162,7 @@ public class TCPClient {
         long wrappedSeq = seqNum % 65536;
         out.println(wrappedSeq + ":" + attemptedCount);
     }
-
+    
     /* Processes an incoming ACK, updating the window variables.
      * @param ackLine Raw ACK string received from the server
      */
