@@ -1,5 +1,5 @@
 // Arun Murugan
-// Ajay Paramasivan 
+//Ajay Paramasivan
 
 import java.io.*;
 import java.net.*;
@@ -56,6 +56,9 @@ public class TCPClient {
 
             printRetransmitTable();
 
+        } catch (IOException e) {
+            System.err.println("\nClient connection error: " + e.getMessage());
+            System.err.println("Shutting down client.");
         } catch (Exception e) {
             System.err.println("Client exception: " + e.getMessage());
             e.printStackTrace();
@@ -70,15 +73,20 @@ public class TCPClient {
      * @param in  BufferedReader connected to server output
      * @param out PrintWriter connected to server input
      */
-
     private static void initConnection(BufferedReader in, PrintWriter out) throws IOException {
         out.println("network");
         String response = in.readLine();
+        
+        // Detect if the server immediately disconnected
+        if (response == null) {
+            throw new IOException("Server dropped connection during initialization.");
+        }
+        
         System.out.println("Connection Status: SUCCESS");
         System.out.println("Server advertised rwnd: " + rwnd);
         
         // Parse the initial rwnd from the server's SUCCESS message
-        if (response != null && response.startsWith("SUCCESS:")) {
+        if (response.startsWith("SUCCESS:")) {
             String[] parts = response.split(":");
             if (parts.length > 1) {
                 rwnd = Integer.parseInt(parts[1]);
@@ -101,6 +109,11 @@ public class TCPClient {
         long lastPrinted = 0;
 
         while (sendBase < TOTAL_PACKETS) {
+            // Check if server connection was lost while writing
+            if (out.checkError()) {
+                throw new IOException("Lost connection to server");
+            }
+
             int effectiveWindow = Math.min(cwnd, rwnd);
 
             // 1. Send packets up to the window size limit
@@ -123,10 +136,14 @@ public class TCPClient {
             try {
                 // If window is full, we must block until an ACK arrives. 
                 if (nextSeqNum - sendBase >= effectiveWindow || nextSeqNum == TOTAL_PACKETS) {
-                    processAck(in.readLine()); 
+                    String line = in.readLine();
+                    if (line == null) throw new IOException("Server disconnected abruptly.");
+                    processAck(line); 
                 }
                 while (in.ready()) {
-                    processAck(in.readLine());
+                    String line = in.readLine();
+                    if (line == null) throw new IOException("Server disconnected abruptly.");
+                    processAck(line);
                 }
             } catch (SocketTimeoutException e) {
                 logEvent("TIMEOUT", nextSeqNum);
@@ -162,7 +179,7 @@ public class TCPClient {
         long wrappedSeq = seqNum % 65536;
         out.println(wrappedSeq + ":" + attemptedCount);
     }
-    
+
     /* Processes an incoming ACK, updating the window variables.
      * @param ackLine Raw ACK string received from the server
      */
@@ -253,13 +270,11 @@ public class TCPClient {
             table.merge(bucket, 1L, Long::sum);
         }
  
-        // System.out.println("\n===== RETRANSMISSION TABLE =====");
         System.out.printf("%-25s %-15s%n", "# of retransmissions", "# of packets");
         System.out.println("-".repeat(40));
         for (Map.Entry<Integer, Long> entry : table.entrySet()) {
             String label = entry.getKey() == 4 ? "4+" : String.valueOf(entry.getKey());
             System.out.printf("%-25s %-15d%n", label, entry.getValue());
         }
-        // System.out.println("================================");
     }
 }
